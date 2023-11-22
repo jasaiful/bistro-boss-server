@@ -42,17 +42,17 @@ async function run() {
         const verifyToken = (req, res, next) => {
             // console.log('inside verify token', req.headers.authorization);
             if (!req.headers.authorization) {
-              return res.status(401).send({ message: 'unauthorized access' });
+                return res.status(401).send({ message: 'unauthorized access' });
             }
             const token = req.headers.authorization.split(' ')[1];
             jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-              if (err) {
-                return res.status(401).send({ message: 'unauthorized access' })
-              }
-              req.decoded = decoded;
-              next();
+                if (err) {
+                    return res.status(401).send({ message: 'unauthorized access' })
+                }
+                req.decoded = decoded;
+                next();
             })
-          }
+        }
 
         // use verify admin after verifyToken
         const verifyAdmin = async (req, res, next) => {
@@ -126,6 +126,48 @@ async function run() {
             const result = await menuCollection.find().toArray();
             res.send(result);
         });
+
+        // post menu with img 
+        app.post('/menu', verifyToken, verifyAdmin, async (req, res) => {
+            const item = req.body;
+            const result = await menuCollection.insertOne(item);
+            res.send(result);
+        })
+
+        // get menu items from for update field 
+        app.get('/menu/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await menuCollection.findOne(query);
+            res.send(result);
+        })
+
+        // update/patch menu items
+        app.patch('/menu/:id', async(req, res) => {
+            const item = req.body;
+            const id = req.params.id;
+            const filter = {_id: new ObjectId(id)}
+            const updatedDoc = {
+                $set: {
+                    name: item.name,
+                    category: item.category,
+                    price: item.price,
+                    recipe: item.recipe,
+                    image: item.image
+                }
+            }
+            const result = await menuCollection.updateOne(filter, updatedDoc)
+            res.send(result);
+        })
+
+
+        // delete menu from manage item
+        app.delete('/menu/:id', verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await menuCollection.deleteOne(query);
+            res.send(result);
+        })
 
         app.get('/reviews', async (req, res) => {
             const result = await reviewCollection.find().toArray();
